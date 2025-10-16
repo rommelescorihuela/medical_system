@@ -29,7 +29,7 @@ func NewConnection() (*gorm.DB, error) {
 	}
 
 	// Auto-migrate
-	err = db.AutoMigrate(&entities.User{})
+	err = db.AutoMigrate(&entities.User{}, &entities.Tenant{}, &entities.TenantSettings{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}

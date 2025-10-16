@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"medical-system/application/tenants"
 	"medical-system/infrastructure/auth"
 	"strings"
 
@@ -8,11 +9,15 @@ import (
 )
 
 type AuthMiddleware struct {
-	TokenGen auth.TokenGenerator
+	TokenGen      auth.TokenGenerator
+	tenantService *tenants.TenantApplicationService
 }
 
-func NewAuthMiddleware(tokenGen auth.TokenGenerator) *AuthMiddleware {
-	return &AuthMiddleware{TokenGen: tokenGen}
+func NewAuthMiddleware(tokenGen auth.TokenGenerator, tenantService *tenants.TenantApplicationService) *AuthMiddleware {
+	return &AuthMiddleware{
+		TokenGen:      tokenGen,
+		tenantService: tenantService,
+	}
 }
 
 func (m *AuthMiddleware) JWTMiddleware() echo.MiddlewareFunc {
@@ -39,6 +44,13 @@ func (m *AuthMiddleware) JWTMiddleware() echo.MiddlewareFunc {
 			}
 			if tenantID, ok := (*claims)["tenant_id"].(string); ok {
 				c.Set("tenant_id", tenantID)
+
+				// Load tenant information if available (only if tenantService is not nil)
+				if m.tenantService != nil {
+					if tenant, err := m.tenantService.GetTenantBySlug(tenantID); err == nil {
+						c.Set("tenant", tenant)
+					}
+				}
 			}
 			if role, ok := (*claims)["role"].(string); ok {
 				c.Set("role", role)

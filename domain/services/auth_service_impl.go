@@ -10,14 +10,23 @@ import (
 )
 
 type AuthServiceImpl struct {
-	userRepo repositories.UserRepository
+	userRepo      repositories.UserRepository
+	tenantService TenantService
 }
 
-func NewAuthService(userRepo repositories.UserRepository) AuthService {
-	return &AuthServiceImpl{userRepo: userRepo}
+func NewAuthService(userRepo repositories.UserRepository, tenantService TenantService) AuthService {
+	return &AuthServiceImpl{
+		userRepo:      userRepo,
+		tenantService: tenantService,
+	}
 }
 
 func (s *AuthServiceImpl) RegisterUser(user *entities.User, password string) error {
+	// Validate tenant limits before registration
+	if err := s.tenantService.ValidateTenantLimits(user.TenantID); err != nil {
+		return err
+	}
+
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

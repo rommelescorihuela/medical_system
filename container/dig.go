@@ -2,6 +2,7 @@ package container
 
 import (
 	appauth "medical-system/application/auth"
+	apptenants "medical-system/application/tenants"
 	"medical-system/domain/services"
 	infraauth "medical-system/infrastructure/auth"
 	"medical-system/infrastructure/database"
@@ -51,17 +52,25 @@ func (c *Container) registerDependencies() {
 
 	// Repositories
 	c.dig.Provide(repositories.NewUserRepository)
+	c.dig.Provide(repositories.NewTenantRepository)
+	c.dig.Provide(repositories.NewTenantSettingsRepository)
 
 	// Domain Services
 	c.dig.Provide(services.NewAuthService)
+	c.dig.Provide(services.NewTenantService)
 
 	// Application Services
 	c.dig.Provide(appauth.NewAuthApplicationService)
+	c.dig.Provide(apptenants.NewTenantApplicationService)
 
 	// Middleware
-	c.dig.Provide(func(tokenGen infraauth.TokenGenerator) *authmiddleware.AuthMiddleware {
-		return &authmiddleware.AuthMiddleware{TokenGen: tokenGen}
+	c.dig.Provide(func(tokenGen infraauth.TokenGenerator, tenantService *apptenants.TenantApplicationService) *authmiddleware.AuthMiddleware {
+		return authmiddleware.NewAuthMiddleware(tokenGen, tenantService)
 	})
+	c.dig.Provide(func(tenantService *apptenants.TenantApplicationService) *authmiddleware.TenantMiddleware {
+		return authmiddleware.NewTenantMiddleware(tenantService)
+	})
+	c.dig.Provide(authmiddleware.NewAdminMiddleware)
 }
 
 func (c *Container) GetAuthService() (*appauth.AuthApplicationService, error) {
@@ -70,4 +79,20 @@ func (c *Container) GetAuthService() (*appauth.AuthApplicationService, error) {
 		service = s
 	})
 	return service, err
+}
+
+func (c *Container) GetTenantService() (*apptenants.TenantApplicationService, error) {
+	var service *apptenants.TenantApplicationService
+	err := c.dig.Invoke(func(s *apptenants.TenantApplicationService) {
+		service = s
+	})
+	return service, err
+}
+
+func (c *Container) GetTokenGen() (infraauth.TokenGenerator, error) {
+	var tokenGen infraauth.TokenGenerator
+	err := c.dig.Invoke(func(tg infraauth.TokenGenerator) {
+		tokenGen = tg
+	})
+	return tokenGen, err
 }
