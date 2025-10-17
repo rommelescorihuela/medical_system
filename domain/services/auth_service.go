@@ -8,4 +8,5 @@ type AuthService interface {
 	ChangePassword(userID, currentPassword, newPassword string) error
 	RequestPasswordReset(email, tenantID string) error
 	ResetPassword(token, newPassword string) error
+	UpdateProfile(userID, firstName, lastName, email string) (*entities.User, error)
 }

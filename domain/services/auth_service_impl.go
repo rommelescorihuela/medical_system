@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"time"
 
 	"medical-system/domain/entities"
 	"medical-system/domain/repositories"
@@ -66,4 +67,23 @@ func (s *AuthServiceImpl) RequestPasswordReset(email, tenantID string) error {
 func (s *AuthServiceImpl) ResetPassword(token, newPassword string) error {
 	// Implementation for password reset
 	return errors.New("not implemented")
+}
+
+func (s *AuthServiceImpl) UpdateProfile(userID, firstName, lastName, email string) (*entities.User, error) {
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	user.FirstName = firstName
+	user.LastName = lastName
+	user.Email = email
+	user.UpdatedAt = time.Now()
+
+	err = s.userRepo.Update(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
