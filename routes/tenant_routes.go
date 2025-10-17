@@ -3,6 +3,8 @@ package routes
 import (
 	"medical-system/application/tenants"
 	"medical-system/container"
+	infraauth "medical-system/infrastructure/auth"
+	"medical-system/internal/validation"
 	authmiddleware "medical-system/middleware"
 
 	"github.com/labstack/echo/v4"
@@ -23,7 +25,14 @@ func SetupTenantRoutes(e *echo.Echo, container *container.Container) {
 
 	// Initialize admin middleware
 	adminMiddleware := authmiddleware.NewAdminMiddleware()
-	adminAuthMiddleware := authmiddleware.NewAuthMiddleware(tokenGen, nil)
+
+	// Get RBAC enforcer for admin auth middleware
+	var rbacEnforcer *infraauth.CasbinEnforcer
+	container.DigContainer().Invoke(func(rbac *infraauth.CasbinEnforcer) {
+		rbacEnforcer = rbac
+	})
+
+	adminAuthMiddleware := authmiddleware.NewAuthMiddleware(tokenGen, nil, rbacEnforcer)
 
 	// Public routes for tenant registration
 	e.POST("/api/tenants/register", handler.RegisterTenant)
@@ -53,6 +62,14 @@ func (h *TenantHandler) RegisterTenant(c echo.Context) error {
 	var req tenants.RegisterTenantRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(400, map[string]string{"error": "Invalid request"})
+	}
+
+	// Validate request
+	if validationErrors := validation.ValidateStructWithTranslation(req); validationErrors != nil {
+		return c.JSON(400, map[string]interface{}{
+			"error":   "Validation failed",
+			"details": validationErrors,
+		})
 	}
 
 	response, err := h.tenantService.RegisterTenant(req)

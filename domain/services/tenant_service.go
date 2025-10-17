@@ -14,9 +14,12 @@ type TenantService interface {
 	UpdateTenant(tenant *entities.Tenant) error
 	DeleteTenant(id string) error
 	ListActiveTenants() ([]*entities.Tenant, error)
-	ValidateTenantLimits(tenantID string) error
 	GetTenantSettings(tenantID string) (*entities.TenantSettings, error)
 	UpdateTenantSettings(settings *entities.TenantSettings) error
+}
+
+type TenantValidator interface {
+	ValidateTenantLimits(tenantID string) error
 }
 
 type TenantServiceImpl struct {
@@ -104,34 +107,6 @@ func (s *TenantServiceImpl) DeleteTenant(id string) error {
 
 func (s *TenantServiceImpl) ListActiveTenants() ([]*entities.Tenant, error) {
 	return s.tenantRepo.ListActive()
-}
-
-func (s *TenantServiceImpl) ValidateTenantLimits(tenantID string) error {
-	tenant, err := s.tenantRepo.FindByID(tenantID)
-	if err != nil {
-		return err
-	}
-
-	settings, err := s.tenantSettingsRepo.FindByTenantID(tenantID)
-	if err != nil {
-		return err
-	}
-
-	userCount, err := s.tenantRepo.CountUsersByTenant(tenantID)
-	if err != nil {
-		return err
-	}
-
-	maxUsers := settings.MaxUsers
-	if maxUsers == 0 {
-		maxUsers = tenant.Plan.GetUserLimit()
-	}
-
-	if int(userCount) >= maxUsers {
-		return errors.New("tenant has reached maximum user limit")
-	}
-
-	return nil
 }
 
 func (s *TenantServiceImpl) GetTenantSettings(tenantID string) (*entities.TenantSettings, error) {

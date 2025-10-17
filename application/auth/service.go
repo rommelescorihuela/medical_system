@@ -29,9 +29,9 @@ func NewAuthApplicationService(
 }
 
 type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	TenantID string `json:"tenant_id"`
+	Email    string `json:"email" validate:"required,email,max=255"`
+	Password string `json:"password" validate:"required,min=8,max=128"`
+	TenantID string `json:"tenant_id" validate:"required,uuid4"`
 }
 
 type LoginResponse struct {

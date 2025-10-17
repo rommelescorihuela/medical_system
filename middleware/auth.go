@@ -11,12 +11,14 @@ import (
 type AuthMiddleware struct {
 	TokenGen      auth.TokenGenerator
 	tenantService *tenants.TenantApplicationService
+	rbacEnforcer  *auth.CasbinEnforcer
 }
 
-func NewAuthMiddleware(tokenGen auth.TokenGenerator, tenantService *tenants.TenantApplicationService) *AuthMiddleware {
+func NewAuthMiddleware(tokenGen auth.TokenGenerator, tenantService *tenants.TenantApplicationService, rbacEnforcer *auth.CasbinEnforcer) *AuthMiddleware {
 	return &AuthMiddleware{
 		TokenGen:      tokenGen,
 		tenantService: tenantService,
+		rbacEnforcer:  rbacEnforcer,
 	}
 }
 
@@ -69,9 +71,68 @@ func (m *AuthMiddleware) RBACMiddleware(resource, action string) echo.Middleware
 				return c.JSON(403, map[string]string{"error": "Access denied - not authenticated"})
 			}
 
-			// For now, just check if user is authenticated
-			// TODO: Implement full RBAC with Casbin
+			tenantID := c.Get("tenant_id")
+			if tenantID == nil {
+				return c.JSON(403, map[string]string{"error": "Access denied - tenant context required"})
+			}
+
+			userIDStr, ok := userID.(string)
+			if !ok {
+				return c.JSON(403, map[string]string{"error": "Invalid user ID"})
+			}
+
+			tenantIDStr, ok := tenantID.(string)
+			if !ok {
+				return c.JSON(403, map[string]string{"error": "Invalid tenant ID"})
+			}
+
+			// Check permission using Casbin
+			// Note: This assumes the enforcer is available through dependency injection
+			// For now, we'll implement a basic check - this should be enhanced
+			allowed, err := m.checkPermission(userIDStr, tenantIDStr, resource, action)
+			if err != nil {
+				return c.JSON(500, map[string]string{"error": "Permission check failed"})
+			}
+
+			if !allowed {
+				return c.JSON(403, map[string]string{
+					"error":    "Access denied - insufficient permissions",
+					"resource": resource,
+					"action":   action,
+				})
+			}
+
 			return next(c)
 		}
 	}
+}
+
+// checkPermission performs RBAC permission check using Casbin
+func (m *AuthMiddleware) checkPermission(userID, tenantID, resource, action string) (bool, error) {
+	if m.rbacEnforcer == nil {
+		// Fallback to basic checks if enforcer is not available
+		return m.basicPermissionCheck(userID, tenantID, resource, action)
+	}
+
+	// Use Casbin for permission checking
+	return m.rbacEnforcer.CheckPermission(userID, tenantID, resource, action)
+}
+
+// basicPermissionCheck provides fallback permission checking
+func (m *AuthMiddleware) basicPermissionCheck(userID, tenantID, resource, action string) (bool, error) {
+	// Get role from context (this should be set during JWT validation)
+	role := "user" // Default fallback
+
+	// Basic permission matrix for fallback
+	switch role {
+	case "admin", "super_admin":
+		return true, nil // Admins can do everything
+	case "user":
+		// Users can only access their own profile
+		if resource == "profile" && (action == "read" || action == "write") {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

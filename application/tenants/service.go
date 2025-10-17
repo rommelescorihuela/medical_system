@@ -1,6 +1,7 @@
 package tenants
 
 import (
+	"errors"
 	"medical-system/domain/entities"
 	"medical-system/domain/services"
 )
@@ -10,9 +11,9 @@ type TenantApplicationService struct {
 }
 
 type RegisterTenantRequest struct {
-	Name  string `json:"name" validate:"required"`
-	Email string `json:"email" validate:"required,email"`
-	Slug  string `json:"slug" validate:"required"`
+	Name  string `json:"name" validate:"required,min=2,max=100"`
+	Email string `json:"email" validate:"required,email,max=255"`
+	Slug  string `json:"slug" validate:"required,min=3,max=50,alphanum"`
 	Plan  string `json:"plan" validate:"required,oneof=basic professional enterprise"`
 }
 
@@ -89,7 +90,9 @@ func (s *TenantApplicationService) UpdateTenantSettings(tenantID string, allowRe
 }
 
 func (s *TenantApplicationService) ValidateTenantForUserRegistration(tenantID string) error {
-	return s.tenantService.ValidateTenantLimits(tenantID)
+	// This method is now deprecated - validation should be done through TenantValidator
+	// Keeping for backward compatibility, but should be removed in future versions
+	return errors.New("use TenantValidator directly for tenant limit validation")
 }
 
 // Admin functions for tenant management

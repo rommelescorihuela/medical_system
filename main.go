@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"medical-system/container"
+	"medical-system/internal/errors"
 	authmiddleware "medical-system/middleware"
 	"medical-system/routes"
 	"strings"
@@ -17,6 +18,9 @@ func main() {
 
 	// Initialize Echo server
 	e := echo.New()
+
+	// Set custom error handler
+	e.HTTPErrorHandler = errors.ErrorHandler
 
 	// Initialize tenant middleware
 	var tenantMiddleware *authmiddleware.TenantMiddleware

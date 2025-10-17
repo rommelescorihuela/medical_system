@@ -58,14 +58,15 @@ func (c *Container) registerDependencies() {
 	// Domain Services
 	c.dig.Provide(services.NewAuthService)
 	c.dig.Provide(services.NewTenantService)
+	c.dig.Provide(services.NewTenantValidator)
 
 	// Application Services
 	c.dig.Provide(appauth.NewAuthApplicationService)
 	c.dig.Provide(apptenants.NewTenantApplicationService)
 
 	// Middleware
-	c.dig.Provide(func(tokenGen infraauth.TokenGenerator, tenantService *apptenants.TenantApplicationService) *authmiddleware.AuthMiddleware {
-		return authmiddleware.NewAuthMiddleware(tokenGen, tenantService)
+	c.dig.Provide(func(tokenGen infraauth.TokenGenerator, tenantService *apptenants.TenantApplicationService, rbacEnforcer *infraauth.CasbinEnforcer) *authmiddleware.AuthMiddleware {
+		return authmiddleware.NewAuthMiddleware(tokenGen, tenantService, rbacEnforcer)
 	})
 	c.dig.Provide(func(tenantService *apptenants.TenantApplicationService) *authmiddleware.TenantMiddleware {
 		return authmiddleware.NewTenantMiddleware(tenantService)

@@ -5,12 +5,12 @@ import (
 )
 
 type RegisterRequest struct {
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-	TenantID  string `json:"tenant_id"`
-	Role      string `json:"role"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	Email     string `json:"email" validate:"required,email,max=255"`
+	Password  string `json:"password" validate:"required,min=8,max=128"`
+	TenantID  string `json:"tenant_id" validate:"required,uuid4"`
+	Role      string `json:"role" validate:"required,oneof=admin user"`
+	FirstName string `json:"first_name" validate:"required,min=2,max=100"`
+	LastName  string `json:"last_name" validate:"required,min=2,max=100"`
 }
 
 type RegisterResponse struct {
@@ -19,9 +19,9 @@ type RegisterResponse struct {
 }
 
 type UpdateProfileRequest struct {
-	Email     string `json:"email"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	Email     string `json:"email" validate:"required,email,max=255"`
+	FirstName string `json:"first_name" validate:"required,min=2,max=100"`
+	LastName  string `json:"last_name" validate:"required,min=2,max=100"`
 }
 
 type UpdateProfileResponse struct {
